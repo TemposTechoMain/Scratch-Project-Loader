@@ -1,52 +1,237 @@
 <!DOCTYPE html>
-<html>
-  <head>
-  <title>"Scratch Project Loader"</title>
-  </head>
-  <body>
-    <p id="progress">Loading scaffolding...</p>
-    <div id="container" style="max-height: 100%; aspect-ratio: 4 / 3;"></div>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scratch Project Loader</title>
+  <style>
+    /* Base reset and styling */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f4f7f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background: #007acc;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      color: #fff;
+      font-size: 1.8rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: background 0.3s ease;
+    }
+    .content {
+      width: 100%;
+      max-width: 960px;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+    .loader-panel {
+      background: #ffffff;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .loader-panel p {
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+    }
+    .loader-panel textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border: 1px solid #dcdcdc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      resize: none;
+      margin-bottom: 10px;
+    }
+    .loader-panel button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      background: #007acc;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .loader-panel button:hover {
+      background: #005f99;
+    }
+    /* Project wrapper encloses the container plus the overlaid control bar */
+    #project-wrapper {
+      position: relative;
+      width: 100%;
+      /* Maintain a 4:3 aspect ratio */
+      aspect-ratio: 4 / 3;
+      margin-bottom: 1rem;
+    }
+    /* The project container holds the TurboWarp scaffolding instance */
+    #container {
+      width: 100%;
+      height: 100%;
+      background: #eaeaea;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    /* When in fullscreen mode, change container background and border to black */
+    #container:fullscreen,
+    #container:-webkit-full-screen,
+    #container:-moz-full-screen {
+      background-color: #000;
+      border: 1px solid #000;
+    }
+    /* Control bar style – overlaid on top of the project container */
+    .control-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 10px;
+      z-index: 10;
+    }
+    .control-bar button {
+      padding: 6px 12px;
+      border: none;
+      background: #007acc;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .control-bar button:hover {
+      background: #005f99;
+    }
+    /* Loading spinner styles */
+    #loading-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      width: 50px;
+      height: 50px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #007acc;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>Scratch Project Loader</header>
+  <div class="content">
+    <!-- Loader panel for entering a project ID or selecting a local file -->
+    <div class="loader-panel" id="loader-panel">
+      <p id="progress">Input Project ID or load file</p>
+      <textarea id="input" placeholder="Enter project ID here"></textarea>
+      <br>
+      <button id="load">Load Project</button>
+      <button id="loadFile">Load Project from File</button>
+      <!-- Hidden file input for .sb2 or .sb3 files -->
+      <input type="file" id="fileInput" accept=".sb2,.sb3" style="display:none;">
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@turbowarp/scaffolding@0.2.0/dist/scaffolding-min.js"></script>
+    <!-- Project wrapper contains the control bar, project container, and the spinner -->
+    <div id="project-wrapper">
+      <div class="control-bar">
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <button id="fullscreen">Fullscreen</button>
+      </div>
+      <div id="container"></div>
+      <!-- The spinner is initially hidden -->
+      <div id="loading-spinner" style="display: none;"></div>
+    </div>
+  </div>
 
-    <script>
-      const queryString = window.location.search;
-      const urlParams = new URLSearchParams(queryString);
+  <script src="https://cdn.jsdelivr.net/npm/@turbowarp/scaffolding@0.2.0/dist/scaffolding-min.js"></script>
+  <script>
+    let currentScaffolding = null;
 
-      const id = urlParams.get('id');
-      console.log(id);
-      // See https://docs.turbowarp.org/unshared-projects#developers
-      const getProjectMetadata = async (projectId) => {
-        const response = await fetch(`https://trampoline.turbowarp.org/api/projects/${projectId}`);
-        if (response.status === 404) {
-          throw new Error('The project is unshared or does not exist');
-        }
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status} fetching project metadata`);
-        }
-        const json = await response.json();
-        return json;
-      };
-      const getProjectData = async (projectId) => {
-        const metadata = await getProjectMetadata(projectId);
-        const token = metadata.project_token;
-        const response = await fetch(`https://projects.scratch.mit.edu/${projectId}?token=${token}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status} fetching project data`);
-        }
-        const data = await response.arrayBuffer();
-        return data;
-      };
+    // Read URL parameters: project id, project file url, fullscreen flag, and noui flag.
+    const queryParams = new URLSearchParams(window.location.search);
+    const id = queryParams.get('id');
+    const autoFullscreen = queryParams.get('fullscreen')?.toLowerCase() === 'true';
+    const projectUrl = queryParams.get('url');
+    const noUI = queryParams.get('noui')?.toLowerCase() === 'true';
 
+    // Remove the loader panel after a project is loaded.
+    function removeLoaderPanel() {
+      const panel = document.getElementById("loader-panel");
+      if (panel) {
+        panel.remove();
+      }
+    }
+    
+    // Remove the spinner if it exists.
+    function removeSpinner() {
+      const spinner = document.getElementById("loading-spinner");
+      if (spinner) {
+        spinner.remove();
+      }
+    }
+
+    // Fetch project metadata using the provided project ID.
+    async function getProjectMetadata(projectId) {
+      const response = await fetch(`https://trampoline.turbowarp.org/api/projects/${projectId}`);
+      if (response.status === 404) {
+        throw new Error('The project is unshared or does not exist');
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status} fetching project metadata`);
+      }
+      return await response.json();
+    }
+
+    // Fetch project data as an ArrayBuffer using the project metadata,
+    // and return an object containing both the metadata and buffer.
+    async function getProjectData(projectId) {
+      const metadata = await getProjectMetadata(projectId);
+      const token = metadata.project_token;
+      const response = await fetch(`https://projects.scratch.mit.edu/${projectId}?token=${token}`);
+      // Update the document title from metadata.
+      document.title = metadata.title;
+      const buffer = await response.arrayBuffer();
+      return { metadata, buffer };
+    }
+
+    // Initialize TurboWarp scaffolding with the given ArrayBuffer/Blob.
+    function initScaffolding(buffer) {
       const scaffolding = new Scaffolding.Scaffolding();
+      currentScaffolding = scaffolding;
       scaffolding.editableLists = true;
       scaffolding.setup();
       scaffolding.appendTo(document.querySelector('#container'));
-      document.querySelector('#progress').textContent = `noo`;
       const vm = scaffolding.vm;
       const storage = scaffolding.storage;
 
-      // TurboWarp-only extension
       vm.on('ASSET_PROGRESS', (finished, total) => {
         document.querySelector('#progress').textContent = `Loading assets: ${finished} / ${total}`;
       });
@@ -58,11 +243,134 @@
 
       (async () => {
         document.querySelector('#progress').textContent = 'Loading project data...';
-        const project = await getProjectData(id);
-        await scaffolding.loadProject(project);
-        document.querySelector('#progress').textContent = '';
-        scaffolding.greenFlag();
+        // Show the spinner while the project loads
+        const spinner = document.getElementById("loading-spinner");
+        if (spinner) {
+          spinner.style.display = "block";
+        }
+        try {
+          await scaffolding.loadProject(buffer);
+          // Remove the spinner once loading is complete.
+          removeSpinner();
+          // Once loaded, remove the loader panel.
+          removeLoaderPanel();
+          
+          let autoStartTriggered = false;
+          // If fullscreen=true, request fullscreen mode and auto start.
+          if (autoFullscreen) {
+            const container = document.getElementById("container");
+            if (container.requestFullscreen) {
+              container.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+              });
+            }
+            currentScaffolding.greenFlag();
+            autoStartTriggered = true;
+          }
+          // If noui=true, hide additional UI elements and auto start if not already started.
+          if (noUI) {
+            const header = document.querySelector('header');
+            if (header) header.style.display = 'none';
+            const controlBar = document.querySelector('.control-bar');
+            if (controlBar) controlBar.style.display = 'none';
+            if (!autoStartTriggered) {
+              currentScaffolding.greenFlag();
+              autoStartTriggered = true;
+            }
+          }
+        } catch (error) {
+          // In case of error, remove the spinner and show the error message.
+          removeSpinner();
+          document.querySelector('#progress').textContent = error.message;
+          console.error(error);
+        }
       })();
-    </script>
-  </body>
+    }
+
+    // Setup scaffolding using a project ID.
+    async function setupScaffolding(projectId) {
+      const { metadata, buffer } = await getProjectData(projectId);
+      initScaffolding(buffer);
+      // Update the header with the project title.
+      document.querySelector('header').textContent = metadata.title;
+    }
+
+    // Toggle fullscreen mode on the project container.
+    document.getElementById("fullscreen").addEventListener("click", () => {
+      const container = document.getElementById("container");
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        container.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+        });
+      }
+    });
+
+    // Start the project by simulating a green flag click.
+    document.getElementById("start").addEventListener("click", () => {
+      if (currentScaffolding) {
+        currentScaffolding.greenFlag();
+      }
+    });
+
+    // Stop the project (halt all running scripts).
+    document.getElementById("stop").addEventListener("click", () => {
+      if (currentScaffolding && currentScaffolding.vm) {
+        currentScaffolding.vm.stopAll();
+      }
+    });
+
+    // Event listener for "Load Project" button (project ID based load).
+    document.getElementById('load').addEventListener('click', function() {
+      const inputId = document.getElementById('input').value;
+      setupScaffolding(inputId);
+    });
+
+    // Event listener for "Load Project from File" button.
+    document.getElementById('loadFile').addEventListener('click', function() {
+      document.getElementById('fileInput').click();
+    });
+
+    // Read the selected file as an ArrayBuffer and load it.
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        // Update the header to show the file's name.
+        document.querySelector('header').textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const buffer = e.target.result;
+          initScaffolding(buffer);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    // Auto-load a project from the URL parameters.
+    // If both 'url' and 'id' are provided, the 'url' parameter takes precedence.
+    if (projectUrl) {
+      fetch(projectUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status} loading project file`);
+          }
+          return response.arrayBuffer();
+        })
+        .then(buffer => {
+          initScaffolding(buffer);
+          // Attempt to extract a filename from the URL and update the header.
+          const urlParts = projectUrl.split('/');
+          const fileName = urlParts[urlParts.length - 1] || 'Project Loaded';
+          document.querySelector('header').textContent = fileName;
+        })
+        .catch(error => {
+          document.querySelector('#progress').textContent = error.message;
+          console.error(error);
+        });
+    } else if (id) {
+      setupScaffolding(id);
+    }
+  </script>
+</body>
 </html>

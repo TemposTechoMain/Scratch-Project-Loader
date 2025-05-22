@@ -175,12 +175,14 @@
   <script>
     let currentScaffolding = null;
 
-    // Read URL parameters: project id, project file url, fullscreen flag, and noui flag.
+    // Read URL parameters using URLSearchParams.
     const queryParams = new URLSearchParams(window.location.search);
     const id = queryParams.get('id');
-    const autoFullscreen = queryParams.get('fullscreen')?.toLowerCase() === 'true';
     const projectUrl = queryParams.get('url');
-    const noUI = queryParams.get('noui')?.toLowerCase() === 'true';
+
+    // Instead of checking for a specific value, we just check for the parameter’s presence.
+    const autoFullscreen = queryParams.has('fullscreen');
+    const noUI = queryParams.has('noui');
 
     // Remove the loader panel after a project is loaded.
     function removeLoaderPanel() {
@@ -210,13 +212,11 @@
       return await response.json();
     }
 
-    // Fetch project data as an ArrayBuffer using the project metadata,
-    // and return an object containing both the metadata and buffer.
+    // Fetch project data as an ArrayBuffer along with metadata.
     async function getProjectData(projectId) {
       const metadata = await getProjectMetadata(projectId);
       const token = metadata.project_token;
       const response = await fetch(`https://projects.scratch.mit.edu/${projectId}?token=${token}`);
-      // Update the document title from metadata.
       document.title = metadata.title;
       const buffer = await response.arrayBuffer();
       return { metadata, buffer };
@@ -243,31 +243,30 @@
 
       (async () => {
         document.querySelector('#progress').textContent = 'Loading project data...';
-        // Show the spinner while the project loads
+        // Display the spinner while the project loads.
         const spinner = document.getElementById("loading-spinner");
         if (spinner) {
           spinner.style.display = "block";
         }
         try {
           await scaffolding.loadProject(buffer);
-          // Remove the spinner once loading is complete.
+          // Once loaded, remove the spinner and loader panel.
           removeSpinner();
-          // Once loaded, remove the loader panel.
           removeLoaderPanel();
-          
+
           let autoStartTriggered = false;
-          // If fullscreen=true, request fullscreen mode and auto start.
+          // Auto fullscreen if the parameter is present.
           if (autoFullscreen) {
             const container = document.getElementById("container");
             if (container.requestFullscreen) {
               container.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+                console.error(`Error enabling fullscreen: ${err.message}`);
               });
             }
             currentScaffolding.greenFlag();
             autoStartTriggered = true;
           }
-          // If noui=true, hide additional UI elements and auto start if not already started.
+          // Hide extra UI if the "noui" parameter is present.
           if (noUI) {
             const header = document.querySelector('header');
             if (header) header.style.display = 'none';
@@ -279,7 +278,6 @@
             }
           }
         } catch (error) {
-          // In case of error, remove the spinner and show the error message.
           removeSpinner();
           document.querySelector('#progress').textContent = error.message;
           console.error(error);
@@ -291,52 +289,52 @@
     async function setupScaffolding(projectId) {
       const { metadata, buffer } = await getProjectData(projectId);
       initScaffolding(buffer);
-      // Update the header with the project title.
+      // Update header with project title.
       document.querySelector('header').textContent = metadata.title;
     }
 
-    // Toggle fullscreen mode on the project container.
+    // Toggle fullscreen mode when the "Fullscreen" button is pressed.
     document.getElementById("fullscreen").addEventListener("click", () => {
       const container = document.getElementById("container");
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
         container.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
+          console.error(`Error enabling fullscreen: ${err.message}`);
         });
       }
     });
 
-    // Start the project by simulating a green flag click.
+    // Start the project when the "Start" button is pressed.
     document.getElementById("start").addEventListener("click", () => {
       if (currentScaffolding) {
         currentScaffolding.greenFlag();
       }
     });
 
-    // Stop the project (halt all running scripts).
+    // Stop the project when the "Stop" button is pressed.
     document.getElementById("stop").addEventListener("click", () => {
       if (currentScaffolding && currentScaffolding.vm) {
         currentScaffolding.vm.stopAll();
       }
     });
 
-    // Event listener for "Load Project" button (project ID based load).
+    // Load project by ID from user input.
     document.getElementById('load').addEventListener('click', function() {
       const inputId = document.getElementById('input').value;
       setupScaffolding(inputId);
     });
 
-    // Event listener for "Load Project from File" button.
+    // Load project from local file.
     document.getElementById('loadFile').addEventListener('click', function() {
       document.getElementById('fileInput').click();
     });
 
-    // Read the selected file as an ArrayBuffer and load it.
+    // Read the selected file and load it.
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const file = event.target.files[0];
       if (file) {
-        // Update the header to show the file's name.
+        // Update the header with the file's name.
         document.querySelector('header').textContent = file.name;
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -348,7 +346,7 @@
     });
 
     // Auto-load a project from the URL parameters.
-    // If both 'url' and 'id' are provided, the 'url' parameter takes precedence.
+    // When both 'url' and 'id' are provided, the 'url' parameter takes precedence.
     if (projectUrl) {
       fetch(projectUrl)
         .then(response => {
@@ -359,7 +357,7 @@
         })
         .then(buffer => {
           initScaffolding(buffer);
-          // Attempt to extract a filename from the URL and update the header.
+          // Use the last segment of the URL as the header text.
           const urlParts = projectUrl.split('/');
           const fileName = urlParts[urlParts.length - 1] || 'Project Loaded';
           document.querySelector('header').textContent = fileName;

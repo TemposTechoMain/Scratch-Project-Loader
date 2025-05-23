@@ -24,7 +24,7 @@
       text-align: center;
       color: #fff;
       font-size: 1.8rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       transition: background 0.3s ease;
     }
     .content {
@@ -33,7 +33,7 @@
       padding: 2rem;
       box-sizing: border-box;
     }
-    /* Loader Panel (unchanged) */
+    /* Loader Panel */
     .loader-panel {
       background: #ffffff;
       padding: 1.5rem;
@@ -71,7 +71,7 @@
     .loader-panel button:hover {
       background: #005f99;
     }
-    /* Wrapper for the control bar and project player */
+    /* Player Container: wraps control bar and project player */
     #player-container {
       width: 100%;
     }
@@ -81,7 +81,7 @@
       box-sizing: border-box;
       padding: 10px;
       background: rgba(0, 0, 0, 0.7);
-      border-radius: 8px;  /* Same radius as loader panel */
+      border-radius: 8px; /* same as loader panel */
       display: flex;
       align-items: center;
       gap: 10px;
@@ -100,11 +100,11 @@
     .control-bar button:hover {
       background: #005f99;
     }
-    /* Align fullscreen button to the right */
+    /* Fullscreen button aligned right */
     #fullscreen {
       margin-left: auto;
     }
-    /* Project wrapper and container */
+    /* Project Wrapper (project player area) */
     #project-wrapper {
       position: relative;
       width: 100%;
@@ -125,7 +125,7 @@
       background-color: #000;
       border: 1px solid #000;
     }
-    /* Loading Spinner */
+    /* Loading Spinner styling */
     #loading-spinner {
       position: absolute;
       top: 50%;
@@ -143,7 +143,7 @@
       0% { transform: translate(-50%, -50%) rotate(0deg); }
       100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
-    /* Container for additional buttons */
+    /* Button container for additional buttons */
     #view-scratch-container {
       text-align: center;
       margin: 1rem 0;
@@ -171,7 +171,7 @@
     #export-sb3:hover {
       background: #e0a800;
     }
-    /* Footer */
+    /* Footer styling */
     footer#site-counter {
       width: 100%;
       text-align: center;
@@ -195,19 +195,19 @@
       <input type="file" id="fileInput" accept=".sb2,.sb3" style="display:none;">
     </div>
 
-    <!-- Container for the control bar and project player -->
+    <!-- Player Container: Control Bar + Project Player -->
     <div id="player-container">
-      <!-- Control Bar positioned on top -->
+      <!-- Control Bar -->
       <div class="control-bar">
         <button id="start">Start</button>
         <button id="stop">Stop</button>
         <button id="fullscreen">Fullscreen</button>
       </div>
       
-      <!-- Project Wrapper -->
+      <!-- Project Wrapper (the project player area) -->
       <div id="project-wrapper">
         <div id="container"></div>
-        <div id="loading-spinner" style="display: none;"></div>
+        <div id="loading-spinner" style="display:none;"></div>
       </div>
     </div>
 
@@ -234,6 +234,7 @@
         progressElem.textContent = newText;
       }
     }
+    
     // Remove the spinner.
     function removeSpinner() {
       const spinner = document.getElementById("loading-spinner");
@@ -241,6 +242,7 @@
         spinner.remove();
       }
     }
+    
     // --- Method 2: Update Offsets on Scroll ---
     window.addEventListener("scroll", () => {
       window.dispatchEvent(new Event("resize"));
@@ -256,6 +258,7 @@
         throw new Error(`HTTP error ${response.status} fetching project metadata`);
       return await response.json();
     }
+    
     // Get project data.
     async function getProjectData(projectId) {
       const metadata = await getProjectMetadata(projectId);
@@ -265,6 +268,7 @@
       const buffer = await response.arrayBuffer();
       return { metadata, buffer };
     }
+    
     // Initialize TurboWarp scaffolding.
     function initScaffolding(buffer) {
       const scaffolding = new Scaffolding.Scaffolding();
@@ -274,14 +278,16 @@
       scaffolding.appendTo(document.querySelector("#container"));
       const vm = scaffolding.vm;
       const storage = scaffolding.storage;
+      
       vm.on("ASSET_PROGRESS", (finished, total) => {
         document.querySelector("#progress").textContent = `Loading assets: ${finished} / ${total}`;
       });
+      
       storage.addWebStore(
         [storage.AssetType.ImageVector, storage.AssetType.ImageBitmap, storage.AssetType.Sound],
-        asset =>
-          `https://assets.scratch.mit.edu/internalapi/asset/${asset.assetId}.${asset.dataFormat}/get/`
+        asset => `https://assets.scratch.mit.edu/internalapi/asset/${asset.assetId}.${asset.dataFormat}/get/`
       );
+      
       (async () => {
         updateProgressText("Loading project data...");
         const spinner = document.getElementById("loading-spinner");
@@ -296,9 +302,7 @@
           if (autoFullscreen) {
             const container = document.getElementById("container");
             if (container.requestFullscreen) {
-              container.requestFullscreen().catch(err =>
-                console.error(`Error enabling fullscreen: ${err.message}`)
-              );
+              container.requestFullscreen().catch(err => console.error(`Error enabling fullscreen: ${err.message}`));
             }
             currentScaffolding.greenFlag();
             autoStartTriggered = true;
@@ -320,6 +324,7 @@
         }
       })();
     }
+    
     // Add Export button functionality.
     async function addExportButtonFunctionality() {
       document.getElementById("export-sb3").addEventListener("click", async function () {
@@ -330,10 +335,7 @@
               const options = {
                 suggestedName: document.querySelector("header").textContent + ".sb3",
                 types: [
-                  {
-                    description: "SB3 file",
-                    accept: { "application/zip": [".sb3"] }
-                  }
+                  { description: "SB3 file", accept: {"application/zip": [".sb3"]} }
                 ]
               };
               const handle = await window.showSaveFilePicker(options);
@@ -355,36 +357,46 @@
         }
       });
     }
+    
     // Setup scaffolding using a project ID.
     async function setupScaffolding(projectId) {
       const { metadata, buffer } = await getProjectData(projectId);
       initScaffolding(buffer);
+      if (currentScaffolding && currentScaffolding.vm) {
+        currentScaffolding.vm.projectId = projectId;
+      }
       document.querySelector("header").textContent = metadata.title;
       const btnContainer = document.getElementById("view-scratch-container");
       btnContainer.innerHTML =
-        '<button id="view-scratch">View On Scratch</button> <button id="export-sb3">Export as SB3</button>';
+        '<button id="view-scratch">View On Scratch</button> ' +
+        '<button id="export-sb3">Export as SB3</button>';
       document.getElementById("view-scratch").addEventListener("click", function () {
-        window.open("https://scratch.mit.edu/projects/" + projectId + "/", "_blank");
+        if (currentScaffolding && currentScaffolding.vm && currentScaffolding.vm.projectId) {
+          window.open("https://scratch.mit.edu/projects/" + currentScaffolding.vm.projectId + "/", "_blank");
+        } else {
+          alert("Project ID is not available.");
+        }
       });
       await addExportButtonFunctionality();
     }
+    
     // Setup scaffolding when loaded via URL.
     async function setupScaffoldingFromURL() {
       const btnContainer = document.getElementById("view-scratch-container");
       btnContainer.innerHTML = '<button id="export-sb3">Export as SB3</button>';
       await addExportButtonFunctionality();
     }
+    
     // Toggle fullscreen.
     document.getElementById("fullscreen").addEventListener("click", () => {
       const container = document.getElementById("container");
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
-        container.requestFullscreen().catch(err =>
-          console.error(`Error enabling fullscreen: ${err.message}`)
-        );
+        container.requestFullscreen().catch(err => console.error(`Error enabling fullscreen: ${err.message}`));
       }
     });
+    
     // Start and Stop controls.
     document.getElementById("start").addEventListener("click", () => {
       if (currentScaffolding) currentScaffolding.greenFlag();
@@ -392,15 +404,18 @@
     document.getElementById("stop").addEventListener("click", () => {
       if (currentScaffolding && currentScaffolding.vm) currentScaffolding.vm.stopAll();
     });
+    
     // Load project by ID from input.
     document.getElementById("load").addEventListener("click", function () {
       const inputId = document.getElementById("input").value;
       setupScaffolding(inputId);
     });
+    
     // Load project from local file.
     document.getElementById("loadFile").addEventListener("click", function () {
       document.getElementById("fileInput").click();
     });
+    
     // Handle file input.
     document.getElementById("fileInput").addEventListener("change", function (event) {
       const file = event.target.files[0];
@@ -414,6 +429,7 @@
         reader.readAsArrayBuffer(file);
       }
     });
+    
     // Auto-load project from URL parameters.
     if (projectUrl) {
       fetch(projectUrl)
@@ -437,7 +453,7 @@
       setupScaffolding(id);
     }
   </script>
-
+  
   <script>
     // Site visits counter using CountAPI.
     fetch("https://api.countapi.xyz/hit/scratchprojectloader.com/visits")

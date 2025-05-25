@@ -33,7 +33,7 @@
       padding: 2rem;
       box-sizing: border-box;
     }
-    /* Loader Panel */
+    /* Loader Panel (always visible so a new project can be loaded) */
     .loader-panel {
       background: #ffffff;
       padding: 1.5rem;
@@ -81,7 +81,7 @@
       box-sizing: border-box;
       padding: 10px;
       background: rgba(0, 0, 0, 0.7);
-      border-radius: 8px; /* same as loader panel */
+      border-radius: 8px; /* Same as loader panel */
       display: flex;
       align-items: center;
       gap: 10px;
@@ -100,11 +100,11 @@
     .control-bar button:hover {
       background: #005f99;
     }
-    /* Fullscreen button aligned right */
+    /* Align fullscreen button to the right */
     #fullscreen {
       margin-left: auto;
     }
-    /* Project Wrapper (project player area) */
+    /* Project Wrapper (the project player area) */
     #project-wrapper {
       position: relative;
       width: 100%;
@@ -143,7 +143,7 @@
       0% { transform: translate(-50%, -50%) rotate(0deg); }
       100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
-    /* Button container for additional buttons */
+    /* Container for additional buttons */
     #view-scratch-container {
       text-align: center;
       margin: 1rem 0;
@@ -186,7 +186,7 @@
 <body>
   <header>Scratch Project Loader</header>
   <div class="content">
-    <!-- Loader Panel remains visible -->
+    <!-- Loader Panel (remains visible, allowing you to load a new project) -->
     <div class="loader-panel" id="loader-panel">
       <p id="progress">Input Project ID or load file</p>
       <textarea id="input" placeholder="Enter project ID here"></textarea><br>
@@ -204,14 +204,15 @@
         <button id="fullscreen">Fullscreen</button>
       </div>
       
-      <!-- Project Wrapper (the project player area) -->
+      <!-- Project Wrapper (project player area) -->
       <div id="project-wrapper">
+        <!-- Clear the container when a new project is loaded -->
         <div id="container"></div>
         <div id="loading-spinner" style="display:none;"></div>
       </div>
     </div>
 
-    <!-- Container for additional buttons -->
+    <!-- Container for additional buttons ("View On Scratch" and "Export as SB3") -->
     <div id="view-scratch-container"></div>
   </div>
 
@@ -235,7 +236,7 @@
       }
     }
     
-    // Remove the spinner.
+    // Remove the spinner element.
     function removeSpinner() {
       const spinner = document.getElementById("loading-spinner");
       if (spinner) {
@@ -271,6 +272,8 @@
     
     // Initialize TurboWarp scaffolding.
     function initScaffolding(buffer) {
+      // Clear previous project content (if any)
+      document.querySelector("#container").innerHTML = "";
       const scaffolding = new Scaffolding.Scaffolding();
       currentScaffolding = scaffolding;
       scaffolding.editableLists = true;
@@ -296,7 +299,7 @@
           await scaffolding.loadProject(buffer);
           removeSpinner();
           updateProgressText("Project Loaded");
-          // Scroll smoothly so that both the control bar and project player are visible.
+          // Scroll so that both the control bar and the project player are visible.
           document.getElementById("player-container").scrollIntoView({ behavior: "smooth" });
           let autoStartTriggered = false;
           if (autoFullscreen) {
@@ -416,7 +419,7 @@
       document.getElementById("fileInput").click();
     });
     
-    // Handle file input.
+    // Handle file input for project file.
     document.getElementById("fileInput").addEventListener("change", function (event) {
       const file = event.target.files[0];
       if (file) {

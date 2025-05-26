@@ -469,5 +469,12 @@
         document.getElementById("site-counter").textContent = "Visits not available";
       });
   </script>
+  <script>
+  // Dynamically create a script element for the Eureka userscript.
+  var script = document.createElement('script');
+  script.src = "https://github.com/EurekaScratch/eureka/releases/download/11.4/eureka.user.js";
+  document.head.appendChild(script);
+</script>
+
 </body>
 </html>

@@ -435,26 +435,28 @@
     
     // Auto-load project from URL parameters.
     if (projectUrl) {
-      fetch(projectUrl)
-        .then(response => {
-          if (!response.ok)
-            throw new Error(`HTTP error ${response.status} loading project file`);
-          return response.arrayBuffer();
-        })
-        .then(async buffer => {
-          initScaffolding(buffer);
-          const urlParts = projectUrl.split("/");
-          const fileName = urlParts[urlParts.length - 1] || "Project Loaded";
-          document.querySelector("header").textContent = fileName;
-          await setupScaffoldingFromURL();
-        })
-        .catch(error => {
-          document.querySelector("#progress").textContent = error.message;
-          console.error(error);
-        });
-    } else if (id) {
-      setupScaffolding(id);
-    }
+  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(projectUrl);
+
+  fetch(proxyUrl)
+    .then(response => {
+      if (!response.ok)
+        throw new Error(`HTTP error ${response.status} loading project file`);
+      return response.arrayBuffer();
+    })
+    .then(async buffer => {
+      initScaffolding(buffer);
+      const urlParts = projectUrl.split("/");
+      const fileName = urlParts[urlParts.length - 1] || "Project Loaded";
+      document.querySelector("header").textContent = fileName;
+      await setupScaffoldingFromURL();
+    })
+    .catch(error => {
+      document.querySelector("#progress").textContent = error.message;
+      console.error(error);
+    });
+  } else if (id) {
+    setupScaffolding(id);
+  }
   </script>
   
   <script>
